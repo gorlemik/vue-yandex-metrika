@@ -1,5 +1,6 @@
 let config = {
     id: null,
+    other_ids: null,
     options: {
         accurateTrackBounce: true,
         clickmap: true,

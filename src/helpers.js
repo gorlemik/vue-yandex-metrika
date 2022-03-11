@@ -2,22 +2,30 @@
 import config from './config'
 
 
-export function updateConfig (params) {
+export function updateConfig(params) {
 
     // Merges default config and plugin options
-    Object.keys(params).forEach(function (key) {config[key] = params[key]})
+    Object.keys(params).forEach(function (key) {
+        config[key] = params[key]
+    })
 }
 
 
-export function checkConfig () {
+export function checkConfig() {
 
     // Checks if config is valid
-    if (typeof document === 'undefined') {return}
-    if (!config.id) {throw new Error('[vue-yandex-metrika] Please enter a Yandex Metrika tracking ID')}
-    if (!config.router && config.env !== 'production') {return console.warn('[vue-yandex-metrika] Router is not passed, autotracking is disabled')}
+    if (typeof document === 'undefined') {
+        return
+    }
+    if (!config.id) {
+        throw new Error('[vue-yandex-metrika] Please enter a Yandex Metrika tracking ID')
+    }
+    if (!config.router && config.env !== 'production') {
+        return console.warn('[vue-yandex-metrika] Router is not passed, autotracking is disabled')
+    }
 }
 
-export function loadScript (callback, scriptSrc=config.scriptSrc) {
+export function loadScript(callback, scriptSrc = config.scriptSrc) {
     var head = document.head || document.getElementsByTagName('head')[0]
     const script = document.createElement('script')
 
@@ -30,8 +38,63 @@ export function loadScript (callback, scriptSrc=config.scriptSrc) {
     script.onload = callback
 }
 
+class VueMetrika {
+    constructor(mainMetrika, others) {
+        this.mainMetrika = mainMetrika;
+        this.others = others;
+    }
 
-export function createMetrika (Vue) {
+    addFileExtension() {
+        this.mainMetrika.addFileExtension(arguments)
+    }
+
+    extLink() {
+        this.mainMetrika.extLink(arguments)
+    }
+
+    file() {
+        this.mainMetrika.file(arguments)
+    }
+
+    getClientID() {
+        this.mainMetrika.getClientID(arguments)
+    }
+
+    hit() {
+        this.mainMetrika.hit(arguments)
+        if (this.others) {
+            this.others.forEach(el => {
+                el.hit(arguments)
+            })
+        }
+    }
+
+    notBounce() {
+        this.mainMetrika.notBounce(arguments)
+    }
+
+    params() {
+        this.mainMetrika.params(arguments)
+    }
+
+    reachGoal() {
+        this.mainMetrika.reachGoal(arguments)
+    }
+
+    replacePhones() {
+        this.mainMetrika.replacePhones(arguments)
+    }
+
+    setUserID() {
+        this.mainMetrika.setUserID(arguments)
+    }
+
+    userParams() {
+        this.mainMetrika.userParams(arguments)
+    }
+}
+
+export function createMetrika(Vue) {
 
     if (config.env === "production") {
 
@@ -41,8 +104,20 @@ export function createMetrika (Vue) {
             ...config.options
         }
         const metrika = new Ya.Metrika2(init)
-        window[`yaCounter${config.id}`] = metrika
-        return Vue.prototype.$metrika = Vue.$metrika = metrika
+
+        let yaMetrika = null
+        const others = config.other_ids.map(el => {
+            let yaConfig = {
+                id: el,
+                ...config.options
+            }
+            yaMetrika = new Ya.Metrika2(yaConfig)
+            window[`yaCounter${el}`] = yaMetrika
+            return yaMetrika
+        })
+
+
+        return Vue.prototype.$metrika = Vue.$metrika = new VueMetrika(metrika, others)
 
     } else {
 
@@ -67,17 +142,21 @@ export function createMetrika (Vue) {
 }
 
 
-export function startTracking (metrika) {
+export function startTracking(metrika) {
 
     // Starts autotracking if router is passed
     if (config.router) {
         config.router.afterEach(function (to, from) {
 
             // check if route is in ignoreRoutes
-            if (config.ignoreRoutes.indexOf(to.name) > -1) {return}
+            if (config.ignoreRoutes.indexOf(to.name) > -1) {
+                return
+            }
 
             // do not track page visit if previous and next routes URLs match
-            if (config.skipSamePath && to.path == from.path) {return}
+            if (config.skipSamePath && to.path == from.path) {
+                return
+            }
 
             // track page visit
             metrika.hit(to.path, {referer: from.path})
